@@ -1,134 +1,208 @@
-import tkinter
+import pygame
 import random
 
-class SnakeGame:
-    def __init__(self):
-        self.width = 1008
-        self.height = 1008
-        
-        self.window = tkinter.Tk()
-        self.canvas = tkinter.Canvas(self.window, width = self.width, 
-                                     height = self.height, bg="black")
-        self.canvas.pack()
-        
-        self.snake_size = 48 
-        self.snake_direction = "Right"
-        
-        self.score = 0
-        self.score_label = tkinter.Label(self.window, text=f"Score: {self.score}")
-        self.score_label.pack(pady = 8)
-        
-        self.x_center = self.width // 2
-        self.y_center = self.height // 2
-        
-        self.snake = [self.canvas.create_rectangle(self.x_center - self.snake_size//2 + self.snake_size*i, 
-                                                    self.y_center - self.snake_size//2, 
-                                                    self.x_center + self.snake_size//2 + self.snake_size*i, 
-                                                    self.y_center + self.snake_size//2, 
-                                                    fill="green", outline="") for i in range(1, 5)]
-        
-        self.window.bind("<Key>", self.on_key_press)
-        
-        self.spawn_food()
-        self.move_snake()
-        self.window.mainloop()
+from pygame.math import Vector2
 
-    def on_key_press(self, event):
-        if event.keysym == "w" and self.snake_direction != "Down":
-            self.snake_direction = "Up"
-        elif event.keysym == "a" and self.snake_direction != "Right":
-            self.snake_direction = "Left"
-        elif event.keysym == "s" and self.snake_direction != "Up":
-            self.snake_direction = "Down"
-        elif event.keysym == "d" and self.snake_direction != "Left":
-            self.snake_direction = "Right"
+class Game:
+    def __init__(self, snake, food):
+        self.running = False
+
+        self.snake = snake
+        self.food = food
+        
+    def update(self):
+        self.snake.move()
+        self.collision_checker()
     
-    def spawn_food(self):
-        food_x_coordinates = [self.snake_size*i for i in range(self.width//self.snake_size)]
-        food_y_coordinates = [self.snake_size*i for i in range(self.height//self.snake_size)]            
+    def display_elements(self):
+        self.food.display()
+        self.snake.display()
+       
+    def start(self):
+        return            
+    
+    def over(self):
+        self.running = False
         
-        valid_food_x_coordinates = []
-        valid_food_y_coordinates = []
+    def collision_checker(self):
+        if self.food.position == self.snake.body[-1]:
+            self.food.new_position()
+            self.snake.ate = True 
         
-        for value in food_x_coordinates:
-            for segment in self.snake:
-                if self.canvas.coords(segment)[0] != value or self.canvas.coords(segment)[2] != value:
-                    valid_food_x_coordinates.append(value)    
+        if (not 0 <= self.snake.body[-1].x <= row_count or 
+            not 0 <= self.snake.body[-1].y <= row_count): 
+            self.over()
+        
+        for segment in self.snake.body[:-1]:
+            if segment == self.snake.body[-1]:
+                self.over()
+
+
+class Food:
+    def __init__(self, snake):
+        self.snake = snake
+
+        self.new_position()
+        
+# Appends all pairs of values up to row_count to self.position 
+# if they aren't inside the snake        
+    
+    def new_position(self):
+        self.positions = []
+        
+        for x in range(row_count):
+            for y in range(row_count):
+                position = Vector2(x, y)
                 
-        for value in food_y_coordinates:
-            for segment in self.snake:
-                if self.canvas.coords(segment)[0] != value or self.canvas.coords(segment)[2] != value:
-                    valid_food_y_coordinates.append(value)    
-        
-        self.food_x = random.choice(valid_food_x_coordinates)
-        self.food_y = random.choice(valid_food_y_coordinates)
+                if position not in self.snake.body:
+                    self.positions.append(position)        
 
-        self.food = self.canvas.create_rectangle(self.food_x, self.food_y, 
-                                                 self.food_x + self.snake_size, self.food_y + self.snake_size, 
-                                                 fill="red", outline="")
-    def check_for_collisions(self):
-        self.direction_vector()
-
-        head_x_1 = self.canvas.coords(self.snake[-1])[0]
-        head_y_1 = self.canvas.coords(self.snake[-1])[1]
-        head_x_2 = self.canvas.coords(self.snake[-1])[2]
-        head_y_2 = self.canvas.coords(self.snake[-1])[3]
-        
-        if (head_x_1 + self.x_direction > self.width or head_x_1 + self.x_direction < 0 or
-            head_y_1 + self.y_direction > self.width or head_y_1 + self.y_direction < 0 or
-            head_x_2 + self.x_direction > self.width or head_x_2 + self.x_direction < 0 or
-            head_y_2 + self.y_direction > self.width or head_y_2 + self.y_direction < 0):
-            return True            
-
-        for segment in self.snake[:-2]:
-            if self.canvas.coords(segment) == self.canvas.coords(self.snake[-1]):
-                return True
- 
-    def direction_vector(self):
-        self.x_direction = 0
-        self.y_direction = 0
-        
-        if self.snake_direction == "Right":
-            self.x_direction += self.snake_size
-        elif self.snake_direction == "Left":
-            self.x_direction -= self.snake_size
-        elif self.snake_direction == "Up":
-            self.y_direction -= self.snake_size
-        elif self.snake_direction == "Down":
-            self.y_direction += self.snake_size        
+        self.position = random.choice(self.positions)
     
-    def move_snake(self):
-        if self.check_for_collisions():
-            self.game_over()
-        else:
-            if self.canvas.coords(self.snake[-1]) == self.canvas.coords(self.food):
-                self.canvas.delete(self.food)
-                self.score += 1
-                self.score_label.config(text=f"Score: {self.score}")
-                self.spawn_food()          
+    def display(self):
+        self.food = pygame.Rect(self.position.x * cell_size, 
+                                self.position.y * cell_size, 
+                                cell_size, cell_size)
+         
+        pygame.draw.rect(screen, (255, 63, 31), self.food)
+
+
+class Snake:
+    def __init__(self):
+        self.body = [Vector2(i, 15) for i in range(15, 19)]
+        self.direction = Vector2(1, 0)        
+        self.ate = False
+         
+    def display(self):
+        for segment_position in self.body:
+            segment = pygame.Rect(int(segment_position.x * cell_size), 
+                                  int(segment_position.y * cell_size), 
+                                  cell_size, cell_size)
             
-                self.snake.insert(0, self.canvas.create_rectangle(
-                    self.canvas.coords(self.snake[0])[0], self.canvas.coords(self.snake[0])[1], 
-                    self.canvas.coords(self.snake[0])[2], self.canvas.coords(self.snake[0])[3], fill="green", outline=""))
-        
-            self.canvas.move(self.snake[-1], self.x_direction, self.y_direction)
-        
-            for i in range(len(self.snake)-1):
-                self.canvas.coords(self.snake[i], self.canvas.coords(self.snake[i+1]))
-        
-            for segment in self.snake[:-2]:
-                if self.canvas.coords(segment) == self.canvas.coords(self.snake[-1]):
-                    self.snake_direction = None
-        
-            if self.snake_direction != None:
-                self.window.after(200, self.move_snake)        
-        
+            if segment_position == self.body[-1]:
+                screen.blit(self.head_image(), segment)
+            elif segment_position == self.body[0]:
+                screen.blit(self.tail_image(), segment)
             else:
-                self.game_over()
+                screen.blit(self.body_image(segment_position), segment)
+                
+        
+    def move(self):
+        if self.ate == False:
+            self.body.remove(self.body[0])
+        
+        self.body.append(self.body[-1]+self.direction)        
+        
+        self.ate = False
 
-    def game_over(self):
-        self.snake_direction = None
-        self.text = self.canvas.create_text(self.width//2, self.height//2, font=("Calibri", 32, "bold"), fill="white", anchor="center")
-        self.canvas.insert(self.text, 12, "Game Over")
 
-SnakeGame()
+    def head_image(self):
+        head_facing = self.body[-2] - self.body[-1]
+        
+        if head_facing == Vector2(0, -1):
+            return pygame.image.load("snake_head.png").convert_alpha()
+        
+        elif head_facing == Vector2(0, 1):
+            return pygame.transform.rotate(pygame.image.load("snake_head.png").convert_alpha(), 180)
+        
+        elif head_facing == Vector2(1, 0):
+            return pygame.transform.rotate(pygame.image.load("snake_head.png").convert_alpha(), -90)
+        
+        elif head_facing == Vector2(-1, 0):
+            return pygame.transform.rotate(pygame.image.load("snake_head.png").convert_alpha(), 90)
+    
+    def tail_image(self):
+        tail_facing = self.body[1] - self.body[0]
+
+        if tail_facing == Vector2(0, -1):
+            return pygame.transform.rotate(pygame.image.load("snake_tail.png").convert_alpha(), -90)
+        
+        elif tail_facing == Vector2(0, 1):
+            return pygame.transform.rotate(pygame.image.load("snake_tail.png").convert_alpha(), 90)
+        
+        elif tail_facing == Vector2(1, 0):
+            return pygame.transform.rotate(pygame.image.load("snake_tail.png").convert_alpha(), 180)
+        
+        elif tail_facing == Vector2(-1, 0):
+            return pygame.image.load("snake_tail.png").convert_alpha()
+    
+    def body_image(self, segment):
+        index = self.body.index(segment)
+        
+        # Above, Below
+        if self.body[index-1] - segment == Vector2(0, -1) == segment - self.body[index+1]:
+            return pygame.transform.rotate(pygame.image.load("snake_straight.png").convert_alpha(), 90)
+        # Below, Above        
+        elif self.body[index-1] - segment == Vector2(0, 1) == segment - self.body[index+1]:
+            return pygame.transform.rotate(pygame.image.load("snake_straight.png").convert_alpha(), 90)
+        
+        elif self.body[index-1] - segment == Vector2(-1, 0) == segment - self.body[index+1]:
+            return pygame.image.load("snake_straight.png").convert_alpha()
+        
+        elif self.body[index-1] - segment == Vector2(1, 0) == segment - self.body[index+1]:
+            return pygame.image.load("snake_straight.png").convert_alpha()
+        
+        elif (self.body[index-1] - segment == Vector2(-1, 0) and self.body[index+1] - segment == Vector2(0, -1) or 
+              self.body[index-1] - segment == Vector2(0, -1) and self.body[index+1] - segment == Vector2(-1, 0)):
+            return pygame.transform.rotate(pygame.image.load("snake_turn.png").convert_alpha(), -90)
+        elif (self.body[index-1] - segment == Vector2(1, 0) and self.body[index+1] - segment == Vector2(0, 1) or
+              self.body[index-1] - segment == Vector2(0, 1) and self.body[index+1] - segment == Vector2(1, 0)):
+            return pygame.transform.rotate(pygame.image.load("snake_turn.png").convert_alpha(), 90)
+        
+        elif (self.body[index-1] - segment == Vector2(0, -1) and self.body[index+1] - segment == Vector2(-1, 0) or
+              self.body[index-1] - segment == Vector2(-1, 0) and self.body[index+1] - segment == Vector2(0, -1)):
+            return pygame.transform.rotate(pygame.image.load("snake_turn.png").convert_alpha(), 90)
+        
+        elif (self.body[index-1] - segment == Vector2(0, 1) and self.body[index+1] - segment == Vector2(1, 0) or
+              self.body[index-1] - segment == Vector2(1, 0) and self.body[index+1] - segment == Vector2(0, 1)):
+            return pygame.transform.rotate(pygame.image.load("snake_turn.png").convert_alpha(), 90)
+        else:
+            return pygame.image.load("snake_straight.png").convert_alpha()
+
+        
+pygame.init()
+
+cell_size = 32
+row_count = 29
+
+screen = pygame.display.set_mode((row_count*cell_size, row_count*cell_size))
+
+snake = Snake()
+food = Food(snake) 
+game = Game(snake, food)
+
+screen_update = pygame.USEREVENT
+pygame.time.set_timer(screen_update, 200)
+
+game.running = True
+
+while game.running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+
+        if event.type == screen_update:
+            game.update()
+
+        if event.type == pygame.KEYDOWN:
+            if (event.key == pygame.K_UP or event.key == pygame.K_w and 
+                snake.direction.y != 1):
+                snake.direction = Vector2(0, -1)
+            
+            if (event.key == pygame.K_DOWN or event.key == pygame.K_s and
+                snake.direction.y != -1):
+                snake.direction = Vector2(0, 1)
+            
+            if (event.key == pygame.K_RIGHT or event.key == pygame.K_d and
+                snake.direction.x != -1):
+                snake.direction = Vector2(1, 0)
+                 
+            if (event.key == pygame.K_LEFT or event.key == pygame.K_a and 
+                snake.direction.x != 1):
+                snake.direction = Vector2(-1, 0)
+    
+    screen.fill((31, 31, 31))
+   
+    game.display_elements() 
+
+    pygame.display.update()
