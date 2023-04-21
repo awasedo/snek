@@ -3,10 +3,11 @@ import random
 
 from pygame.math import Vector2
 
+
 class Game:
     def __init__(self, snake, food):
         self.running = False
-
+            
         self.snake = snake
         self.food = food
         
@@ -17,7 +18,8 @@ class Game:
     def display_elements(self):
         self.food.display()
         self.snake.display()
-       
+        self.display_score()
+
     def start(self):
         return            
     
@@ -27,7 +29,7 @@ class Game:
     def collision_checker(self):
         if self.food.position == self.snake.body[-1]:
             self.food.new_position()
-            self.snake.ate = True 
+            self.snake.ate = True
         
         if (not 0 <= self.snake.body[-1].x <= row_count or 
             not 0 <= self.snake.body[-1].y <= row_count): 
@@ -37,6 +39,10 @@ class Game:
             if segment == self.snake.body[-1]:
                 self.over()
 
+    def display_score(self):
+        text = pygame.font.SysFont("calibri", 32).render(f"Score: {len(self.snake.body)-3}", True, (255, 255, 255))
+        screen.blit(text, (cell_size,cell_size))
+
 
 class Food:
     def __init__(self, snake):
@@ -44,9 +50,6 @@ class Food:
 
         self.new_position()
         
-# Appends all pairs of values up to row_count to self.position 
-# if they aren't inside the snake        
-    
     def new_position(self):
         self.positions = []
         
@@ -69,10 +72,15 @@ class Food:
 
 class Snake:
     def __init__(self):
-        self.body = [Vector2(i, 15) for i in range(15, 19)]
+        self.body = [Vector2(i, 9) for i in range(9, 9+3)]
         self.direction = Vector2(1, 0)        
         self.ate = False
-         
+        
+        self.head = pygame.transform.scale(pygame.image.load("snake_head.png"), (cell_size, cell_size)).convert_alpha()
+        self.tail = pygame.transform.scale(pygame.image.load("snake_tail.png"), (cell_size, cell_size)).convert_alpha()
+        self.straight = pygame.transform.scale(pygame.image.load("snake_straight.png"), (cell_size, cell_size)).convert_alpha()
+        self.turn = pygame.transform.scale(pygame.image.load("snake_turn.png"), (cell_size, cell_size)).convert_alpha()
+
     def display(self):
         for segment_position in self.body:
             segment = pygame.Rect(int(segment_position.x * cell_size), 
@@ -100,70 +108,66 @@ class Snake:
         head_facing = self.body[-2] - self.body[-1]
         
         if head_facing == Vector2(0, -1):
-            return pygame.image.load("snake_head.png").convert_alpha()
+            return self.head
         
         elif head_facing == Vector2(0, 1):
-            return pygame.transform.rotate(pygame.image.load("snake_head.png").convert_alpha(), 180)
+            return pygame.transform.rotate(self.head, 180)
         
         elif head_facing == Vector2(1, 0):
-            return pygame.transform.rotate(pygame.image.load("snake_head.png").convert_alpha(), -90)
+            return pygame.transform.rotate(self.head, -90)
         
         elif head_facing == Vector2(-1, 0):
-            return pygame.transform.rotate(pygame.image.load("snake_head.png").convert_alpha(), 90)
+            return pygame.transform.rotate(self.head, 90)
     
     def tail_image(self):
         tail_facing = self.body[1] - self.body[0]
 
         if tail_facing == Vector2(0, -1):
-            return pygame.transform.rotate(pygame.image.load("snake_tail.png").convert_alpha(), -90)
+            return pygame.transform.rotate(self.tail, -90)
         
         elif tail_facing == Vector2(0, 1):
-            return pygame.transform.rotate(pygame.image.load("snake_tail.png").convert_alpha(), 90)
+            return pygame.transform.rotate(self.tail, 90)
         
         elif tail_facing == Vector2(1, 0):
-            return pygame.transform.rotate(pygame.image.load("snake_tail.png").convert_alpha(), 180)
+            return pygame.transform.rotate(self.tail, 180)
         
         elif tail_facing == Vector2(-1, 0):
-            return pygame.image.load("snake_tail.png").convert_alpha()
-    
+            return self.tail
+
     def body_image(self, segment):
         index = self.body.index(segment)
         
-        # Above, Below
-        if self.body[index-1] - segment == Vector2(0, -1) == segment - self.body[index+1]:
-            return pygame.transform.rotate(pygame.image.load("snake_straight.png").convert_alpha(), 90)
-        # Below, Above        
-        elif self.body[index-1] - segment == Vector2(0, 1) == segment - self.body[index+1]:
-            return pygame.transform.rotate(pygame.image.load("snake_straight.png").convert_alpha(), 90)
+        if (self.body[index-1] - segment == Vector2(0, -1) == segment - self.body[index+1] or
+            self.body[index-1] - segment == Vector2(0, 1) == segment - self.body[index+1]):
+            return pygame.transform.rotate(self.straight, 90)
         
-        elif self.body[index-1] - segment == Vector2(-1, 0) == segment - self.body[index+1]:
-            return pygame.image.load("snake_straight.png").convert_alpha()
+        elif (self.body[index-1] - segment == Vector2(-1, 0) == segment - self.body[index+1] or
+              self.body[index-1] - segment == Vector2(1, 0) == segment - self.body[index+1]):
+            return self.straight 
         
-        elif self.body[index-1] - segment == Vector2(1, 0) == segment - self.body[index+1]:
-            return pygame.image.load("snake_straight.png").convert_alpha()
-        
+
         elif (self.body[index-1] - segment == Vector2(-1, 0) and self.body[index+1] - segment == Vector2(0, -1) or 
               self.body[index-1] - segment == Vector2(0, -1) and self.body[index+1] - segment == Vector2(-1, 0)):
-            return pygame.transform.rotate(pygame.image.load("snake_turn.png").convert_alpha(), -90)
+            return pygame.transform.rotate(self.turn, -90)
+        
         elif (self.body[index-1] - segment == Vector2(1, 0) and self.body[index+1] - segment == Vector2(0, 1) or
               self.body[index-1] - segment == Vector2(0, 1) and self.body[index+1] - segment == Vector2(1, 0)):
-            return pygame.transform.rotate(pygame.image.load("snake_turn.png").convert_alpha(), 90)
+            return pygame.transform.rotate(self.turn, 90)
         
-        elif (self.body[index-1] - segment == Vector2(0, -1) and self.body[index+1] - segment == Vector2(-1, 0) or
-              self.body[index-1] - segment == Vector2(-1, 0) and self.body[index+1] - segment == Vector2(0, -1)):
-            return pygame.transform.rotate(pygame.image.load("snake_turn.png").convert_alpha(), 90)
-        
-        elif (self.body[index-1] - segment == Vector2(0, 1) and self.body[index+1] - segment == Vector2(1, 0) or
-              self.body[index-1] - segment == Vector2(1, 0) and self.body[index+1] - segment == Vector2(0, 1)):
-            return pygame.transform.rotate(pygame.image.load("snake_turn.png").convert_alpha(), 90)
-        else:
-            return pygame.image.load("snake_straight.png").convert_alpha()
+        elif (self.body[index-1] - segment == Vector2(-1, 0) and self.body[index+1] - segment == Vector2(0, 1) or 
+              self.body[index-1] - segment == Vector2(0, 1) and self.body[index+1] - segment == Vector2(-1, 0)):
+            return self.turn
 
-        
+        elif (self.body[index-1] - segment == Vector2(1, 0) and self.body[index+1] - segment == Vector2(0, -1) or 
+              self.body[index-1] - segment == Vector2(0, -1) and self.body[index+1] - segment == Vector2(1, 0)):
+            return pygame.transform.rotate(self.turn, 180)
+
+
 pygame.init()
 
 cell_size = 32
-row_count = 29
+# Keep uneven
+row_count = 17
 
 screen = pygame.display.set_mode((row_count*cell_size, row_count*cell_size))
 
@@ -172,7 +176,7 @@ food = Food(snake)
 game = Game(snake, food)
 
 screen_update = pygame.USEREVENT
-pygame.time.set_timer(screen_update, 200)
+pygame.time.set_timer(screen_update, 150)
 
 game.running = True
 
@@ -185,21 +189,21 @@ while game.running:
             game.update()
 
         if event.type == pygame.KEYDOWN:
-            if (event.key == pygame.K_UP or event.key == pygame.K_w and 
-                snake.direction.y != 1):
-                snake.direction = Vector2(0, -1)
+            if event.key == pygame.K_UP or event.key == pygame.K_w:
+                if snake.direction.y != 1:
+                    snake.direction = Vector2(0, -1)
             
-            if (event.key == pygame.K_DOWN or event.key == pygame.K_s and
-                snake.direction.y != -1):
-                snake.direction = Vector2(0, 1)
+            if event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                if snake.direction.y != -1:
+                    snake.direction = Vector2(0, 1)
             
-            if (event.key == pygame.K_RIGHT or event.key == pygame.K_d and
-                snake.direction.x != -1):
-                snake.direction = Vector2(1, 0)
+            if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                if snake.direction.x != -1:
+                    snake.direction = Vector2(1, 0)
                  
-            if (event.key == pygame.K_LEFT or event.key == pygame.K_a and 
-                snake.direction.x != 1):
-                snake.direction = Vector2(-1, 0)
+            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                if snake.direction.x != 1:
+                    snake.direction = Vector2(-1, 0)
     
     screen.fill((31, 31, 31))
    
