@@ -17,7 +17,7 @@ bool running = true;
 std::vector<std::vector<int>> snake = {{8, 8}, {9, 8}, {10, 8}};
 std::vector<int> snake_direction = {1, 0};
 
-std::vector<int> food = {rand() % width-1, rand() % height-1};
+std::vector<int> food = {rand() % width, rand() % height};
 
 void move() {
     std::vector<int> new_position = {snake[snake.size()-1][0]+snake_direction[0], snake[snake.size()-1][1]+snake_direction[1]};
